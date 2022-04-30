@@ -18,6 +18,7 @@ package com.google.ar.core.examples.java.common.samplerender;
 import android.opengl.GLES30;
 import java.io.Closeable;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 
 /**
  * A list of vertex attribute data stored GPU-side.
@@ -31,6 +32,7 @@ import java.nio.FloatBuffer;
 public class VertexBuffer implements Closeable {
   private final GpuBuffer buffer;
   private final int numberOfEntriesPerVertex;
+  private final Boolean isInt;
 
   /**
    * Construct a {@link VertexBuffer} populated with initial data.
@@ -52,9 +54,24 @@ public class VertexBuffer implements Closeable {
           "If non-null, vertex buffer data must be divisible by the number of data points per"
               + " vertex");
     }
-
+    this.isInt = false;
     this.numberOfEntriesPerVertex = numberOfEntriesPerVertex;
     buffer = new GpuBuffer(GLES30.GL_ARRAY_BUFFER, GpuBuffer.FLOAT_SIZE, entries);
+  }
+
+  public VertexBuffer(SampleRender render, int numberOfEntriesPerVertex, IntBuffer entries, Boolean intDataType) {
+    if (entries != null && entries.limit() % numberOfEntriesPerVertex != 0) {
+      throw new IllegalArgumentException(
+              "If non-null, vertex buffer data must be divisible by the number of data points per"
+                      + " vertex");
+    }
+    if(intDataType) {
+      this.isInt = true;
+      this.numberOfEntriesPerVertex = numberOfEntriesPerVertex;
+      buffer = new GpuBuffer(GLES30.GL_ARRAY_BUFFER, GpuBuffer.INT_SIZE, entries);
+    } else {
+      throw new IllegalArgumentException("For int data");
+    }
   }
 
   /**
@@ -92,6 +109,11 @@ public class VertexBuffer implements Closeable {
   /* package-private */
   int getNumberOfEntriesPerVertex() {
     return numberOfEntriesPerVertex;
+  }
+
+  /* package-private */
+  Boolean getIsInt() {
+    return isInt;
   }
 
   /* package-private */

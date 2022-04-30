@@ -58,6 +58,7 @@ import com.google.ar.core.examples.java.common.helpers.InstantPlacementSettings;
 import com.google.ar.core.examples.java.common.helpers.SnackbarHelper;
 import com.google.ar.core.examples.java.common.helpers.TapHelper;
 import com.google.ar.core.examples.java.common.helpers.TrackingStateHelper;
+import com.google.ar.core.examples.java.common.helpers.Pokemon;
 import com.google.ar.core.examples.java.common.samplerender.Framebuffer;
 import com.google.ar.core.examples.java.common.samplerender.GLError;
 import com.google.ar.core.examples.java.common.samplerender.Mesh;
@@ -154,6 +155,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private long lastPointCloudTimestamp = 0;
 
   // Virtual object (ARCore pawn)
+  private ArrayList<Pokemon> pokemans = new ArrayList<>();
   private Mesh virtualObjectMesh;
   private Shader virtualObjectShader;
   private final ArrayList<Anchor> anchors = new ArrayList<>();
@@ -393,20 +395,15 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
           new Mesh(
               render, Mesh.PrimitiveMode.POINTS, /*indexBuffer=*/ null, pointCloudVertexBuffers);
 
-      // Virtual object to render (ARCore pawn)
+      // Virtual object to render (Was ARCore pawn Now Pokemon model)
       Texture virtualObjectAlbedoTexture =
           Texture.createFromAsset(
               render,
-              "models/pawn_albedo.png",
+              "models/mergedChar.png",
               Texture.WrapMode.CLAMP_TO_EDGE,
               Texture.ColorFormat.SRGB);
-      Texture virtualObjectPbrTexture =
-          Texture.createFromAsset(
-              render,
-              "models/pawn_roughness_metallic_ao.png",
-              Texture.WrapMode.CLAMP_TO_EDGE,
-              Texture.ColorFormat.LINEAR);
-      virtualObjectMesh = Mesh.createFromAsset(render, "models/pawn.obj");
+
+      virtualObjectMesh = Mesh.createFromAsset(render, "models/pocketCharmander.obj");
       virtualObjectShader =
           Shader.createFromAssets(
                   render,
@@ -420,9 +417,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
                     }
                   })
               .setTexture("u_AlbedoTexture", virtualObjectAlbedoTexture)
-              .setTexture("u_RoughnessMetallicAmbientOcclusionTexture", virtualObjectPbrTexture)
               .setTexture("u_Cubemap", cubemapFilter.getFilteredCubemapTexture())
               .setTexture("u_DfgTexture", dfgTexture);
+      //pokemans.add(new Pokemon(virtualObjectMesh, virtualObjectShader));
     } catch (IOException e) {
       Log.e(TAG, "Failed to read a required asset file", e);
       messageSnackbarHelper.showError(this, "Failed to read a required asset file: " + e);
@@ -569,7 +566,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
     // Visualize anchors created by touch.
     render.clear(virtualSceneFramebuffer, 0f, 0f, 0f, 0f);
-    for (Anchor anchor : anchors) {
+    //for (Anchor anchor : anchors) {
+    for (Pokemon pokemon :pokemans) {
+      Anchor anchor = pokemon.getAnchor();
       if (anchor.getTrackingState() != TrackingState.TRACKING) {
         continue;
       }
@@ -585,6 +584,12 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       // Update shader properties and draw
       virtualObjectShader.setMat4("u_ModelView", modelViewMatrix);
       virtualObjectShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix);
+      virtualObjectShader.setMat4("jointTransforms[MAX_JOINTS]", modelViewProjectionMatrix);
+
+      // Animate Models
+
+
+
       render.draw(virtualObjectMesh, virtualObjectShader, virtualSceneFramebuffer);
     }
 
@@ -626,7 +631,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
           // Adding an Anchor tells ARCore that it should track this position in
           // space. This anchor is created on the Plane to place the 3D model
           // in the correct position relative both to the world and to the plane.
-          anchors.add(hit.createAnchor());
+          Anchor newPokemonAnchor = hit.createAnchor();
+          pokemans.add(new Pokemon(virtualObjectMesh, virtualObjectShader, newPokemonAnchor));
+          anchors.add(newPokemonAnchor);
           // For devices that support the Depth API, shows a dialog to suggest enabling
           // depth-based occlusion. This dialog needs to be spawned on the UI thread.
           this.runOnUiThread(this::showOcclusionDialogIfNeeded);
