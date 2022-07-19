@@ -205,6 +205,7 @@ public class Mesh implements Closeable {
    * (location 2, vec3), joint IDS (location 3, ivec3) and vertex weights (location 4, vec3).
    */
   public static Mesh createFromDAEAsset(SampleRender render, String assetFileName) throws IOException {
+    // remove if not needed
     try (InputStream inputStream = render.getAssets().open(assetFileName)) {
 
       ColladaParser daeData = new ColladaParser(inputStream);

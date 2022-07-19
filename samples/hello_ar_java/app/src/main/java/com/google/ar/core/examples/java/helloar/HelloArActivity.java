@@ -403,11 +403,14 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
               Texture.WrapMode.CLAMP_TO_EDGE,
               Texture.ColorFormat.SRGB);
 
+      // Mesh from collada file *.DAE ?? Maybe Switch to gltf 2.0 for animation
+        //virtualObjectMesh = Mesh.createFromDAEAsset(render, "models/HaunterTest4.dae");
+      // Mesh from OBJ file
       virtualObjectMesh = Mesh.createFromAsset(render, "models/pocketCharmander.obj");
       virtualObjectShader =
           Shader.createFromAssets(
                   render,
-                  "shaders/environmental_hdr.vert",
+                  "shaders/TestShader.vert",
                   "shaders/environmental_hdr.frag",
                   /*defines=*/ new HashMap<String, String>() {
                     {
@@ -419,7 +422,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
               .setTexture("u_AlbedoTexture", virtualObjectAlbedoTexture)
               .setTexture("u_Cubemap", cubemapFilter.getFilteredCubemapTexture())
               .setTexture("u_DfgTexture", dfgTexture);
-      //pokemans.add(new Pokemon(virtualObjectMesh, virtualObjectShader));
+
     } catch (IOException e) {
       Log.e(TAG, "Failed to read a required asset file", e);
       messageSnackbarHelper.showError(this, "Failed to read a required asset file: " + e);
@@ -572,6 +575,14 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       if (anchor.getTrackingState() != TrackingState.TRACKING) {
         continue;
       }
+      System.out.println(pokemans.size());
+      System.out.println(pokemans.size());
+      System.out.println(pokemans.size());
+      System.out.println(pokemans.size());
+      System.out.println(pokemans.size());
+      System.out.println(pokemans.size());
+      System.out.println(pokemans.size());
+      System.out.println(pokemans.size());
 
       // Get the current pose of an Anchor in world space. The Anchor pose is updated
       // during calls to session.update() as ARCore refines its estimate of the world.
@@ -584,7 +595,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       // Update shader properties and draw
       virtualObjectShader.setMat4("u_ModelView", modelViewMatrix);
       virtualObjectShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix);
-      virtualObjectShader.setMat4("jointTransforms[MAX_JOINTS]", modelViewProjectionMatrix);
+      //virtualObjectShader.setMat4("jointTransforms[MAX_JOINTS]", modelViewProjectionMatrix);
 
       // Animate Models
 

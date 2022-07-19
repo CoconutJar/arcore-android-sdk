@@ -35,21 +35,21 @@ public class Vertex {
         tangents.add(tangent);
     }
 
-    public void averageTangents(){
-        if(tangents.isEmpty()){
-            return;
-        }
-        for(float[] tangent : tangents){
-            // vector math
-            Vector3f.add(averagedTangent, tangent, averagedTangent);
-        }
-        // more vector math
-        averagedTangent.normalise();
-    }
+//    public void averageTangents(){
+//        if(tangents.isEmpty()){
+//            return;
+//        }
+//        for(float[] tangent : tangents){
+//            // vector math
+//            Vector3f.add(averagedTangent, tangent, averagedTangent);
+//        }
+//        // more vector math
+//        averagedTangent.normalise();
+//    }
 
-    public float[] getAverageTangent(){
-        return averagedTangent;
-    }
+//    public float[] getAverageTangent(){
+//        return averagedTangent;
+//    }
 
     public int getIndex(){
         return index;

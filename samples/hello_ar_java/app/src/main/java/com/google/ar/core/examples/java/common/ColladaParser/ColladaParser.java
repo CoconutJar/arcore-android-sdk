@@ -1,7 +1,12 @@
 package com.google.ar.core.examples.java.common.colladaParser;
 
+import com.google.ar.core.examples.java.common.colladaParser.dataTypes.JointData;
+import com.google.ar.core.examples.java.common.colladaParser.dataTypes.XmlNode;
+import com.google.ar.core.examples.java.common.colladaParser.dataTypes.XmlParser;
 import com.google.ar.core.examples.java.common.samplerender.Joint;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
@@ -29,30 +34,83 @@ public class ColladaParser {
 
     private int maxWeights = 3;
 
-    public ColladaParser(InputStream inputStream){
+    public ColladaParser(InputStream path){
         try {
             // Assign the Class Variables the values from the Collada DAE file.
-            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-            Document doc = dBuilder.parse(inputStream);
+            //DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            //DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+            //Document doc = dBuilder.parse(inputStream);
+            //doc.getDocumentElement().normalize();
 
+            XmlNode node = XmlParser.loadXmlFile(path);
 
-            NodeList nodeList = doc.getElementsByTagName("library_controllers");
-            SkinLoader skinLoader = new SkinLoader(nodeList, maxWeights);
+            SkinLoader skinLoader = new SkinLoader(node.getChild("library_controllers"), maxWeights);
             SkinningData skinningData = skinLoader.extractSkinData();
 
-            nodeList = doc.getElementsByTagName("library_visual_scenes");
-            SkeletonLoader jointsLoader = new SkeletonLoader(nodeList, skinningData.jointOrder);
+            SkeletonLoader jointsLoader = new SkeletonLoader(node.getChild("library_visual_scenes"), skinningData.jointOrder);
             SkeletonData jointsData = jointsLoader.extractBoneData();
 
-            nodeList = doc.getElementsByTagName("library_geometries");
-            GeometryLoader g = new GeometryLoader(nodeList, skinningData.verticesSkinData);
+
+            GeometryLoader g = new GeometryLoader(node.getChild("library_geometries"), skinningData.verticesSkinData);
             MeshData meshData = g.extractModelData();
+
+
+
+            // Assign stuff
+            // Saw allocateDirect(meshData.getIndices().length * 4) maybe needed
+            //fvi = IntBuffer.allocate(meshData.getIndices().length);
+            fvi = ByteBuffer.allocateDirect(meshData.getIndices().length * 4)
+                    .order(ByteOrder.nativeOrder()).asIntBuffer();
+            fvi.put(meshData.getIndices());
+            fvi.rewind();
+
+            //jointIDs = IntBuffer.allocate(meshData.getJointIds().length);
+            jointIDs = ByteBuffer.allocateDirect(meshData.getJointIds().length * 4)
+                    .order(ByteOrder.nativeOrder()).asIntBuffer();
+            jointIDs.put(meshData.getJointIds());
+            jointIDs.rewind();
+
+            vertices =  ByteBuffer.allocateDirect(meshData.getVertices().length * 4)
+                    .order(ByteOrder.nativeOrder())
+                    .asFloatBuffer();
+            //vertices = FloatBuffer.allocate(meshData.getVertices().length);
+            vertices.put(meshData.getVertices());
+            vertices.rewind();
+
+            //texCoords = FloatBuffer.allocate(meshData.getTextureCoords().length);
+            texCoords = ByteBuffer.allocateDirect(meshData.getTextureCoords().length * 4)
+                    .order(ByteOrder.nativeOrder()).asFloatBuffer();
+            texCoords.put(meshData.getTextureCoords());
+            texCoords.rewind();
+
+            //normals = FloatBuffer.allocate(meshData.getNormals().length);
+            normals = ByteBuffer.allocateDirect(meshData.getNormals().length * 4)
+                    .order(ByteOrder.nativeOrder()).asFloatBuffer();
+            normals.put(meshData.getNormals());
+            normals.rewind();
+
+            //vw = FloatBuffer.allocate(meshData.getVertexWeights().length);
+            vw = ByteBuffer.allocateDirect(meshData.getVertexWeights().length * 4)
+                    .order(ByteOrder.nativeOrder()).asFloatBuffer();
+            vw.put(meshData.getVertexWeights());
+            vw.rewind();
+
+
+            rootJoint = createJoints(jointsData.headJoint);
 
         } catch (Exception e) {e.printStackTrace();}
 
     }
 
+    Joint createJoints(JointData data){
+        Joint joint = new Joint(data.index, data.nameId, data.bindLocalTransform);
+        for (JointData child : data.children) {
+            joint.addChild(createJoints(child));
+        }
+        return joint;
+    }
+
+    // Getters for mesh data
     public IntBuffer getFaceVertexIndices(int vertPerFace){
         return fvi;
     }

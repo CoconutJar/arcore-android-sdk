@@ -47,7 +47,7 @@ public class Animator {
         }
         increaseAnimationTime();
         Map<String, float[]> currentPose = calculateCurrentAnimationPose();
-        applyPoseToJoints(currentPose, entity.getRootJoint(), new float[]);
+        applyPoseToJoints(currentPose, entity.getRootJoint(), new float[16]);
     }
 
     /**
@@ -57,7 +57,7 @@ public class Animator {
      */
     //TODO FIX GET TIME
     private void increaseAnimationTime() {
-        animationTime += D.getFrameTime();
+        animationTime += 0;
         if (animationTime > currentAnimation.getLength()) {
             this.animationTime %= currentAnimation.getLength();
         }
@@ -124,11 +124,12 @@ public class Animator {
      */
     private void applyPoseToJoints(Map<String, float[]> currentPose, Joint joint, float[] parentTransform) {
         float[] currentLocalTransform = currentPose.get(joint.name);
-        float[] currentTransform = Matrix.mul(parentTransform, currentLocalTransform, null);
+        float[] currentTransform = new float[16];
+        Matrix.multiplyMM(currentTransform, 0, parentTransform, 0, currentLocalTransform, 0);
         for (Joint childJoint : joint.children) {
             applyPoseToJoints(currentPose, childJoint, currentTransform);
         }
-        Matrix.mul(currentTransform, joint.getInverseBindTransform(), currentTransform);
+        Matrix.multiplyMM(currentTransform, 0, joint.getInverseBindTransform(), 0, currentTransform,0);
         joint.setAnimationTransform(currentTransform);
     }
 
