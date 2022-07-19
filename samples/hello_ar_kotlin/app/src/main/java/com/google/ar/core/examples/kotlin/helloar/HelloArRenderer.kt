@@ -29,7 +29,6 @@ import com.google.ar.core.LightEstimate
 import com.google.ar.core.Plane
 import com.google.ar.core.Point
 import com.google.ar.core.Session
-import com.google.ar.core.Trackable
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
 import com.google.ar.core.examples.java.common.helpers.DisplayRotationHelper
@@ -106,10 +105,7 @@ class HelloArRenderer(val activity: HelloArActivity) :
   // Virtual object (ARCore pawn)
   lateinit var virtualObjectMesh: Mesh
   lateinit var virtualObjectShader: Shader
-  lateinit var virtualObjectAlbedoTexture: Texture
-  lateinit var virtualObjectAlbedoInstantPlacementTexture: Texture
-
-  private val wrappedAnchors = mutableListOf<WrappedAnchor>()
+  val anchors = mutableListOf<Anchor>()
 
   // Environmental HDR
   lateinit var dfgTexture: Texture
@@ -205,22 +201,13 @@ class HelloArRenderer(val activity: HelloArActivity) :
         Mesh(render, Mesh.PrimitiveMode.POINTS, /*indexBuffer=*/ null, pointCloudVertexBuffers)
 
       // Virtual object to render (ARCore pawn)
-      virtualObjectAlbedoTexture =
+      val virtualObjectAlbedoTexture =
         Texture.createFromAsset(
           render,
           "models/pawn_albedo.png",
           Texture.WrapMode.CLAMP_TO_EDGE,
           Texture.ColorFormat.SRGB
         )
-
-      virtualObjectAlbedoInstantPlacementTexture =
-        Texture.createFromAsset(
-          render,
-          "models/pawn_albedo_instant_placement.png",
-          Texture.WrapMode.CLAMP_TO_EDGE,
-          Texture.ColorFormat.SRGB
-        )
-
       val virtualObjectPbrTexture =
         Texture.createFromAsset(
           render,
@@ -303,7 +290,7 @@ class HelloArRenderer(val activity: HelloArActivity) :
         activity.depthSettings.depthColorVisualizationEnabled()
     if (camera.trackingState == TrackingState.TRACKING && shouldGetDepthImage) {
       try {
-        val depthImage = frame.acquireDepthImage16Bits()
+        val depthImage = frame.acquireDepthImage()
         backgroundRenderer.updateCameraDepthTexture(depthImage)
         depthImage.close()
       } catch (e: NotYetAvailableException) {
@@ -327,9 +314,8 @@ class HelloArRenderer(val activity: HelloArActivity) :
           activity.getString(R.string.searching_planes)
         camera.trackingState == TrackingState.PAUSED ->
           TrackingStateHelper.getTrackingFailureReasonString(camera)
-        session.hasTrackingPlane() && wrappedAnchors.isEmpty() ->
-          activity.getString(R.string.waiting_taps)
-        session.hasTrackingPlane() && wrappedAnchors.isNotEmpty() -> null
+        session.hasTrackingPlane() && anchors.isEmpty() -> activity.getString(R.string.waiting_taps)
+        session.hasTrackingPlane() && anchors.isNotEmpty() -> null
         else -> activity.getString(R.string.searching_planes)
       }
     if (message == null) {
@@ -382,8 +368,7 @@ class HelloArRenderer(val activity: HelloArActivity) :
 
     // Visualize anchors created by touch.
     render.clear(virtualSceneFramebuffer, 0f, 0f, 0f, 0f)
-    for ((anchor, trackable) in
-      wrappedAnchors.filter { it.anchor.trackingState == TrackingState.TRACKING }) {
+    for (anchor in anchors.filter { it.trackingState == TrackingState.TRACKING }) {
       // Get the current pose of an Anchor in world space. The Anchor pose is updated
       // during calls to session.update() as ARCore refines its estimate of the world.
       anchor.pose.toMatrix(modelMatrix, 0)
@@ -395,15 +380,6 @@ class HelloArRenderer(val activity: HelloArActivity) :
       // Update shader properties and draw
       virtualObjectShader.setMat4("u_ModelView", modelViewMatrix)
       virtualObjectShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix)
-      val texture =
-        if ((trackable as? InstantPlacementPoint)?.trackingMethod ==
-            InstantPlacementPoint.TrackingMethod.SCREENSPACE_WITH_APPROXIMATE_DISTANCE
-        ) {
-          virtualObjectAlbedoInstantPlacementTexture
-        } else {
-          virtualObjectAlbedoTexture
-        }
-      virtualObjectShader.setTexture("u_AlbedoTexture", texture)
       render.draw(virtualObjectMesh, virtualObjectShader, virtualSceneFramebuffer)
     }
 
@@ -506,15 +482,15 @@ class HelloArRenderer(val activity: HelloArActivity) :
     if (firstHitResult != null) {
       // Cap the number of objects created. This avoids overloading both the
       // rendering system and ARCore.
-      if (wrappedAnchors.size >= 20) {
-        wrappedAnchors[0].anchor.detach()
-        wrappedAnchors.removeAt(0)
+      if (anchors.size >= 20) {
+        anchors[0].detach()
+        anchors.removeAt(0)
       }
 
       // Adding an Anchor tells ARCore that it should track this position in
       // space. This anchor is created on the Plane to place the 3D model
       // in the correct position relative both to the world and to the plane.
-      wrappedAnchors.add(WrappedAnchor(firstHitResult.createAnchor(), firstHitResult.trackable))
+      anchors.add(firstHitResult.createAnchor())
 
       // For devices that support the Depth API, shows a dialog to suggest enabling
       // depth-based occlusion. This dialog needs to be spawned on the UI thread.
@@ -525,12 +501,3 @@ class HelloArRenderer(val activity: HelloArActivity) :
   private fun showError(errorMessage: String) =
     activity.view.snackbarHelper.showError(activity, errorMessage)
 }
-
-/**
- * Associates an Anchor with the trackable it was attached to. This is used to be able to check
- * whether or not an Anchor originally was attached to an {@link InstantPlacementPoint}.
- */
-private data class WrappedAnchor(
-  val anchor: Anchor,
-  val trackable: Trackable,
-)

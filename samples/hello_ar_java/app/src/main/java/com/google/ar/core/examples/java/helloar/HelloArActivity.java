@@ -158,10 +158,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private ArrayList<Pokemon> pokemans = new ArrayList<>();
   private Mesh virtualObjectMesh;
   private Shader virtualObjectShader;
-  private Texture virtualObjectAlbedoTexture;
-  private Texture virtualObjectAlbedoInstantPlacementTexture;
-
-  private final List<WrappedAnchor> wrappedAnchors = new ArrayList<>();
+  private final ArrayList<Anchor> anchors = new ArrayList<>();
 
   // Environmental HDR
   private Texture dfgTexture;
@@ -489,7 +486,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     if (camera.getTrackingState() == TrackingState.TRACKING
         && (depthSettings.useDepthForOcclusion()
             || depthSettings.depthColorVisualizationEnabled())) {
-      try (Image depthImage = frame.acquireDepthImage16Bits()) {
+      try (Image depthImage = frame.acquireDepthImage()) {
         backgroundRenderer.updateCameraDepthTexture(depthImage);
       } catch (NotYetAvailableException e) {
         // This normally means that depth data is not available yet. This is normal so we will not
@@ -513,7 +510,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         message = TrackingStateHelper.getTrackingFailureReasonString(camera);
       }
     } else if (hasTrackingPlane()) {
-      if (wrappedAnchors.isEmpty()) {
+      if (anchors.isEmpty()) {
         message = WAITING_FOR_TAP_MESSAGE;
       }
     } else {
@@ -598,15 +595,11 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       // Update shader properties and draw
       virtualObjectShader.setMat4("u_ModelView", modelViewMatrix);
       virtualObjectShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix);
+      //virtualObjectShader.setMat4("jointTransforms[MAX_JOINTS]", modelViewProjectionMatrix);
 
-      if (trackable instanceof InstantPlacementPoint
-          && ((InstantPlacementPoint) trackable).getTrackingMethod()
-              == InstantPlacementPoint.TrackingMethod.SCREENSPACE_WITH_APPROXIMATE_DISTANCE) {
-        virtualObjectShader.setTexture(
-            "u_AlbedoTexture", virtualObjectAlbedoInstantPlacementTexture);
-      } else {
-        virtualObjectShader.setTexture("u_AlbedoTexture", virtualObjectAlbedoTexture);
-      }
+      // Animate Models
+
+
 
       render.draw(virtualObjectMesh, virtualObjectShader, virtualSceneFramebuffer);
     }
@@ -641,9 +634,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
             || (trackable instanceof DepthPoint)) {
           // Cap the number of objects created. This avoids overloading both the
           // rendering system and ARCore.
-          if (wrappedAnchors.size() >= 20) {
-            wrappedAnchors.get(0).getAnchor().detach();
-            wrappedAnchors.remove(0);
+          if (anchors.size() >= 20) {
+            anchors.get(0).detach();
+            anchors.remove(0);
           }
 
           // Adding an Anchor tells ARCore that it should track this position in
@@ -842,27 +835,5 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       config.setInstantPlacementMode(InstantPlacementMode.DISABLED);
     }
     session.configure(config);
-  }
-}
-
-/**
- * Associates an Anchor with the trackable it was attached to. This is used to be able to check
- * whether or not an Anchor originally was attached to an {@link InstantPlacementPoint}.
- */
-class WrappedAnchor {
-  private Anchor anchor;
-  private Trackable trackable;
-
-  public WrappedAnchor(Anchor anchor, Trackable trackable) {
-    this.anchor = anchor;
-    this.trackable = trackable;
-  }
-
-  public Anchor getAnchor() {
-    return anchor;
-  }
-
-  public Trackable getTrackable() {
-    return trackable;
   }
 }

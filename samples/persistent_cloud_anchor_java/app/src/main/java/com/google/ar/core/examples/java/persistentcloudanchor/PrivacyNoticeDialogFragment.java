@@ -70,7 +70,7 @@ public class PrivacyNoticeDialogFragment extends DialogFragment {
               public void onClick(DialogInterface dialog, int id) {
                 Intent browserIntent =
                     new Intent(
-                        Intent.ACTION_VIEW, Uri.parse(getString(R.string.learn_more_url)));
+                        Intent.ACTION_VIEW, Uri.parse(getString(R.string.cloud_anchor_website)));
                 getActivity().startActivity(browserIntent);
               }
             });
