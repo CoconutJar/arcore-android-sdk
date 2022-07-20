@@ -84,9 +84,9 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * This is a simple example that shows how to create an augmented reality (AR) application using the
- * ARCore API. The application will display any detected planes and will allow the user to tap on a
- * plane to place a 3D model.
+ * This is a simple augmented reality (AR) game using the ARCore API.
+ * The application will display any detected planes and will allow the user to tap on a
+ * plane to place a selected 3D model.
  */
 public class HelloArActivity extends AppCompatActivity implements SampleRender.Renderer {
 
@@ -154,8 +154,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   // was not changed.  Do this using the timestamp since we can't compare PointCloud objects.
   private long lastPointCloudTimestamp = 0;
 
-  // Virtual object (ARCore pawn)
-  private ArrayList<Pokemon> pokemans = new ArrayList<>();
+  // Virtual objects (Pokemon)
+  private final ArrayList<Pokemon> pokemans = new ArrayList<>();
   private Mesh virtualObjectMesh;
   private Shader virtualObjectShader;
   private final ArrayList<Anchor> anchors = new ArrayList<>();
@@ -569,20 +569,11 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
     // Visualize anchors created by touch.
     render.clear(virtualSceneFramebuffer, 0f, 0f, 0f, 0f);
-    //for (Anchor anchor : anchors) {
     for (Pokemon pokemon :pokemans) {
       Anchor anchor = pokemon.getAnchor();
       if (anchor.getTrackingState() != TrackingState.TRACKING) {
         continue;
       }
-      System.out.println(pokemans.size());
-      System.out.println(pokemans.size());
-      System.out.println(pokemans.size());
-      System.out.println(pokemans.size());
-      System.out.println(pokemans.size());
-      System.out.println(pokemans.size());
-      System.out.println(pokemans.size());
-      System.out.println(pokemans.size());
 
       // Get the current pose of an Anchor in world space. The Anchor pose is updated
       // during calls to session.update() as ARCore refines its estimate of the world.
@@ -598,6 +589,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       //virtualObjectShader.setMat4("jointTransforms[MAX_JOINTS]", modelViewProjectionMatrix);
 
       // Animate Models
+      // TODO: ANIMATION XD
 
 
 
