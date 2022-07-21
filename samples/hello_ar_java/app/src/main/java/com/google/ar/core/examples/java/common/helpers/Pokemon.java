@@ -10,7 +10,7 @@ public class Pokemon {
     private String name;
     public Anchor anchor;
 
-    public Pokemon(Mesh m, Shader s, Anchor a){
+    public Pokemon(Mesh m, Shader s, String n, Anchor a){
         mesh = m;
         shader = s;
         name = "Pokemon";

@@ -163,7 +163,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private Mesh pokemonMesh;
   private Shader pokemonShader;
   private final ArrayList<Anchor> anchors = new ArrayList<>();
-  private String selectedPokemon = "Charmander";
+  private String selectedPokemon;
 
   // Environmental HDR
   private Texture dfgTexture;
@@ -417,6 +417,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
       // Assign Default Mesh to display
       pokemonMesh = charmanderMesh;
+      selectedPokemon = "Charmander";
       // One shader fits all? Copium
       pokemonShader =
           Shader.createFromAssets(
@@ -613,7 +614,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     backgroundRenderer.drawVirtualScene(render, virtualSceneFramebuffer, Z_NEAR, Z_FAR);
   }
 
-  // Handle only one tap per frame, as taps are usually low frequency compared to frame rate.
+  /** Handle only one tap per frame, as taps are usually low frequency compared to frame rate. */
   private void handleTap(Frame frame, Camera camera) {
     MotionEvent tap = tapHelper.poll();
     if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
@@ -648,7 +649,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
           // space. This anchor is created on the Plane to place the 3D model
           // in the correct position relative both to the world and to the plane.
           Anchor newPokemonAnchor = hit.createAnchor();
-          pokemans.add(new Pokemon(pokemonMesh, pokemonShader, newPokemonAnchor));
+          pokemans.add(new Pokemon(pokemonMesh, pokemonShader, selectedPokemon, newPokemonAnchor));
           // For devices that support the Depth API, shows a dialog to suggest enabling
           // depth-based occlusion. This dialog needs to be spawned on the UI thread.
           this.runOnUiThread(this::showOcclusionDialogIfNeeded);
