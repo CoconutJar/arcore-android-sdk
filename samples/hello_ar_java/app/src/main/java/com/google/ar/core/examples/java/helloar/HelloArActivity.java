@@ -55,6 +55,7 @@ import com.google.ar.core.examples.java.common.helpers.DepthSettings;
 import com.google.ar.core.examples.java.common.helpers.DisplayRotationHelper;
 import com.google.ar.core.examples.java.common.helpers.FullScreenHelper;
 import com.google.ar.core.examples.java.common.helpers.InstantPlacementSettings;
+import com.google.ar.core.examples.java.common.helpers.PokemonRenderSettings;
 import com.google.ar.core.examples.java.common.helpers.SnackbarHelper;
 import com.google.ar.core.examples.java.common.helpers.TapHelper;
 import com.google.ar.core.examples.java.common.helpers.TrackingStateHelper;
@@ -132,6 +133,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private Framebuffer virtualSceneFramebuffer;
   private boolean hasSetTextureNames = false;
 
+  private final PokemonRenderSettings pRenderSettings = new PokemonRenderSettings();
   private boolean[] pokemansSettingsMenuDialogCheckboxes = new boolean[2];
 
   private final DepthSettings depthSettings = new DepthSettings();
@@ -411,13 +413,19 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
       // Mesh from collada file *.DAE ?? Maybe Switch to gltf 2.0 for animation
         //virtualObjectMesh = Mesh.createFromDAEAsset(render, "models/HaunterTest4.dae");
+
       // Meshes from OBJ file
       charmanderMesh = Mesh.createFromAsset(render, "models/pocketCharmander.obj");
       bulbasaurMesh = Mesh.createFromAsset(render, "models/pocketBulbasaur.obj");
 
-      // Assign Default Mesh to display
-      pokemonMesh = charmanderMesh;
-      selectedPokemon = "Charmander";
+      // Assign Default/Last Used mesh to display onTap
+      selectedPokemon = pRenderSettings.meshToRender();
+      if(selectedPokemon.equals("Charmander")){
+        pokemonMesh = charmanderMesh;
+      }else{
+        pokemonMesh = bulbasaurMesh;
+      }
+
       // One shader fits all? Copium
       pokemonShader =
           Shader.createFromAssets(
@@ -600,7 +608,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       // Update shader properties and draw
       pokemonShader.setMat4("u_ModelView", modelViewMatrix);
       pokemonShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix);
-      //virtualObjectShader.setMat4("jointTransforms[MAX_JOINTS]", modelViewProjectionMatrix);
+      //pokemonShader.setMat4("jointTransforms[MAX_JOINTS]", modelViewProjectionMatrix);
 
       // Animate Models
       // TODO: ANIMATION XD
@@ -780,7 +788,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   }
 
   private void updateModelToDisplay(){
-    // TODO: change PokemonMesh, for given model to display
+    // TODO: clean up for multiple meshes
     if (pokemansSettingsMenuDialogCheckboxes[0]){
       pokemonMesh = charmanderMesh;
       selectedPokemon = "Charmander";
@@ -788,6 +796,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       pokemonMesh = bulbasaurMesh;
       selectedPokemon = "Bulbasaur";
     }
+    pRenderSettings.setPokemon(selectedPokemon);
   }
 
   /** Checks if we detected at least one plane. */
