@@ -132,6 +132,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private Framebuffer virtualSceneFramebuffer;
   private boolean hasSetTextureNames = false;
 
+  private boolean[] pokemansSettingsMenuDialogCheckboxes = new boolean[2];
+
   private final DepthSettings depthSettings = new DepthSettings();
   private boolean[] depthSettingsMenuDialogCheckboxes = new boolean[2];
 
@@ -156,9 +158,12 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
   // Virtual objects (Pokemon)
   private final ArrayList<Pokemon> pokemans = new ArrayList<>();
-  private Mesh virtualObjectMesh;
-  private Shader virtualObjectShader;
+  private Mesh charmanderMesh;
+  private Mesh bulbasaurMesh;
+  private Mesh pokemonMesh;
+  private Shader pokemonShader;
   private final ArrayList<Anchor> anchors = new ArrayList<>();
+  private String selectedPokemon = "Charmander";
 
   // Environmental HDR
   private Texture dfgTexture;
@@ -195,15 +200,12 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     instantPlacementSettings.onCreate(this);
     ImageButton settingsButton = findViewById(R.id.settings_button);
     settingsButton.setOnClickListener(
-        new View.OnClickListener() {
-          @Override
-          public void onClick(View v) {
-            PopupMenu popup = new PopupMenu(HelloArActivity.this, v);
-            popup.setOnMenuItemClickListener(HelloArActivity.this::settingsMenuClick);
-            popup.inflate(R.menu.settings_menu);
-            popup.show();
-          }
-        });
+            v -> {
+              PopupMenu popup = new PopupMenu(HelloArActivity.this, v);
+              popup.setOnMenuItemClickListener(HelloArActivity.this::settingsMenuClick);
+              popup.inflate(R.menu.settings_menu);
+              popup.show();
+            });
   }
 
   /** Menu button to launch feature specific settings. */
@@ -213,6 +215,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       return true;
     } else if (item.getItemId() == R.id.instant_placement_settings) {
       launchInstantPlacementSettingsMenuDialog();
+      return true;
+    } else if (item.getItemId() == R.id.change_pokemon_settings) {
+      launchPokemonSettingsMenuDialog();
       return true;
     }
     return false;
@@ -236,6 +241,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   protected void onResume() {
     super.onResume();
 
+    // Checks to see a new session needs to be created.
     if (session == null) {
       Exception exception = null;
       String message = null;
@@ -405,9 +411,14 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
       // Mesh from collada file *.DAE ?? Maybe Switch to gltf 2.0 for animation
         //virtualObjectMesh = Mesh.createFromDAEAsset(render, "models/HaunterTest4.dae");
-      // Mesh from OBJ file
-      virtualObjectMesh = Mesh.createFromAsset(render, "models/pocketCharmander.obj");
-      virtualObjectShader =
+      // Meshes from OBJ file
+      charmanderMesh = Mesh.createFromAsset(render, "models/pocketCharmander.obj");
+      bulbasaurMesh = Mesh.createFromAsset(render, "models/pocketBulbasaur.obj");
+
+      // Assign Default Mesh to display
+      pokemonMesh = charmanderMesh;
+      // One shader fits all? Copium
+      pokemonShader =
           Shader.createFromAssets(
                   render,
                   "shaders/TestShader.vert",
@@ -575,6 +586,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         continue;
       }
 
+      Mesh pokemesh = pokemon.getMesh();
+
       // Get the current pose of an Anchor in world space. The Anchor pose is updated
       // during calls to session.update() as ARCore refines its estimate of the world.
       anchor.getPose().toMatrix(modelMatrix, 0);
@@ -584,8 +597,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       Matrix.multiplyMM(modelViewProjectionMatrix, 0, projectionMatrix, 0, modelViewMatrix, 0);
 
       // Update shader properties and draw
-      virtualObjectShader.setMat4("u_ModelView", modelViewMatrix);
-      virtualObjectShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix);
+      pokemonShader.setMat4("u_ModelView", modelViewMatrix);
+      pokemonShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix);
       //virtualObjectShader.setMat4("jointTransforms[MAX_JOINTS]", modelViewProjectionMatrix);
 
       // Animate Models
@@ -593,7 +606,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
 
 
-      render.draw(virtualObjectMesh, virtualObjectShader, virtualSceneFramebuffer);
+      render.draw(pokemesh, pokemonShader, virtualSceneFramebuffer);
     }
 
     // Compose the virtual scene with the background.
@@ -626,17 +639,16 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
             || (trackable instanceof DepthPoint)) {
           // Cap the number of objects created. This avoids overloading both the
           // rendering system and ARCore.
-          if (anchors.size() >= 20) {
-            anchors.get(0).detach();
-            anchors.remove(0);
+          if (pokemans.size() >= 20) {
+            pokemans.get(0).anchor.detach();
+            pokemans.remove(0);
           }
 
           // Adding an Anchor tells ARCore that it should track this position in
           // space. This anchor is created on the Plane to place the 3D model
           // in the correct position relative both to the world and to the plane.
           Anchor newPokemonAnchor = hit.createAnchor();
-          pokemans.add(new Pokemon(virtualObjectMesh, virtualObjectShader, newPokemonAnchor));
-          anchors.add(newPokemonAnchor);
+          pokemans.add(new Pokemon(pokemonMesh, pokemonShader, newPokemonAnchor));
           // For devices that support the Depth API, shows a dialog to suggest enabling
           // depth-based occlusion. This dialog needs to be spawned on the UI thread.
           this.runOnUiThread(this::showOcclusionDialogIfNeeded);
@@ -674,6 +686,24 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
               depthSettings.setUseDepthForOcclusion(false);
             })
         .show();
+  }
+
+  private void launchPokemonSettingsMenuDialog(){
+    resetSettingsMenuDialogCheckboxes();
+    Resources resources = getResources();
+    new AlertDialog.Builder(this)
+            .setTitle("Choose your Pokemon! *(only select one)*")
+            .setMultiChoiceItems(
+                    resources.getStringArray(R.array.pokemon_options_array),
+                    pokemansSettingsMenuDialogCheckboxes,
+                    (DialogInterface dialog, int which, boolean isChecked) ->
+                            pokemansSettingsMenuDialogCheckboxes[which] = isChecked)
+            .setPositiveButton("Done",
+                    (DialogInterface dialogInterface, int which) -> applySettingsMenuDialogCheckboxes())
+            .setNegativeButton(
+                    android.R.string.cancel,
+                    (DialogInterface dialog, int which) -> resetSettingsMenuDialogCheckboxes())
+            .show();
   }
 
   private void launchInstantPlacementSettingsMenuDialog() {
@@ -735,6 +765,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     instantPlacementSettings.setInstantPlacementEnabled(
         instantPlacementSettingsMenuDialogCheckboxes[0]);
     configureSession();
+    updateModelToDisplay();
   }
 
   private void resetSettingsMenuDialogCheckboxes() {
@@ -742,6 +773,20 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     depthSettingsMenuDialogCheckboxes[1] = depthSettings.depthColorVisualizationEnabled();
     instantPlacementSettingsMenuDialogCheckboxes[0] =
         instantPlacementSettings.isInstantPlacementEnabled();
+    //TODO find better way to reset selected pokemon
+    pokemansSettingsMenuDialogCheckboxes[0] = (selectedPokemon.equals("Charmander"));
+    pokemansSettingsMenuDialogCheckboxes[1] = (!selectedPokemon.equals("Charmander"));
+  }
+
+  private void updateModelToDisplay(){
+    // TODO: change PokemonMesh, for given model to display
+    if (pokemansSettingsMenuDialogCheckboxes[0]){
+      pokemonMesh = charmanderMesh;
+      selectedPokemon = "Charmander";
+    } else {
+      pokemonMesh = bulbasaurMesh;
+      selectedPokemon = "Bulbasaur";
+    }
   }
 
   /** Checks if we detected at least one plane. */
@@ -757,13 +802,13 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   /** Update state based on the current frame's light estimation. */
   private void updateLightEstimation(LightEstimate lightEstimate, float[] viewMatrix) {
     if (lightEstimate.getState() != LightEstimate.State.VALID) {
-      virtualObjectShader.setBool("u_LightEstimateIsValid", false);
+      pokemonShader.setBool("u_LightEstimateIsValid", false);
       return;
     }
-    virtualObjectShader.setBool("u_LightEstimateIsValid", true);
+    pokemonShader.setBool("u_LightEstimateIsValid", true);
 
     Matrix.invertM(viewInverseMatrix, 0, viewMatrix, 0);
-    virtualObjectShader.setMat4("u_ViewInverse", viewInverseMatrix);
+    pokemonShader.setMat4("u_ViewInverse", viewInverseMatrix);
 
     updateMainLight(
         lightEstimate.getEnvironmentalHdrMainLightDirection(),
@@ -780,8 +825,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     worldLightDirection[1] = direction[1];
     worldLightDirection[2] = direction[2];
     Matrix.multiplyMV(viewLightDirection, 0, viewMatrix, 0, worldLightDirection, 0);
-    virtualObjectShader.setVec4("u_ViewLightDirection", viewLightDirection);
-    virtualObjectShader.setVec3("u_LightIntensity", intensity);
+    pokemonShader.setVec4("u_ViewLightDirection", viewLightDirection);
+    pokemonShader.setVec3("u_LightIntensity", intensity);
   }
 
   private void updateSphericalHarmonicsCoefficients(float[] coefficients) {
@@ -808,7 +853,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     for (int i = 0; i < 9 * 3; ++i) {
       sphericalHarmonicsCoefficients[i] = coefficients[i] * sphericalHarmonicFactors[i / 3];
     }
-    virtualObjectShader.setVec3Array(
+    pokemonShader.setVec3Array(
         "u_SphericalHarmonicsCoefficients", sphericalHarmonicsCoefficients);
   }
 
