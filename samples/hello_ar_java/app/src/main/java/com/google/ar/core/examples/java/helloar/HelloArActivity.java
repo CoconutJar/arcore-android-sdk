@@ -24,9 +24,11 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.PopupMenu;
 import android.widget.Toast;
@@ -159,6 +161,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private long lastPointCloudTimestamp = 0;
 
   // Virtual objects (Pokemon)
+  private final ArrayList<String> availablePokemonModels = new ArrayList<>();
   private final ArrayList<Pokemon> pokemans = new ArrayList<>();
   private Mesh charmanderMesh;
   private Mesh bulbasaurMesh;
@@ -182,6 +185,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private final float[] worldLightDirection = {0.0f, 0.0f, 0.0f, 0.0f};
   private final float[] viewLightDirection = new float[4]; // view x world light direction
 
+  private Button fightButton;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -200,12 +205,23 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
     depthSettings.onCreate(this);
     instantPlacementSettings.onCreate(this);
+    pRenderSettings.onCreate(this);
+
+    fightButton = findViewById(R.id.fight_button);
     ImageButton settingsButton = findViewById(R.id.settings_button);
+
     settingsButton.setOnClickListener(
             v -> {
               PopupMenu popup = new PopupMenu(HelloArActivity.this, v);
               popup.setOnMenuItemClickListener(HelloArActivity.this::settingsMenuClick);
               popup.inflate(R.menu.settings_menu);
+              popup.show();
+            });
+    fightButton.setOnClickListener(
+            v -> {
+              PopupMenu popup = new PopupMenu(HelloArActivity.this, v);
+              popup.setOnMenuItemClickListener(HelloArActivity.this::settingsMenuClick);
+              popup.inflate(R.menu.fight_menu);
               popup.show();
             });
   }
@@ -220,6 +236,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       return true;
     } else if (item.getItemId() == R.id.change_pokemon_settings) {
       launchPokemonSettingsMenuDialog();
+      return true;
+    } else if (item.getItemId() == R.id.singleDevice) {
+      launchPokemonSingleDeviceFight();
       return true;
     }
     return false;
@@ -417,6 +436,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       // Meshes from OBJ file
       charmanderMesh = Mesh.createFromAsset(render, "models/pocketCharmander.obj");
       bulbasaurMesh = Mesh.createFromAsset(render, "models/pocketBulbasaur.obj");
+      availablePokemonModels.add("Charmander");
+      availablePokemonModels.add("Bulbasaur");
 
       // Assign Default/Last Used mesh to display onTap
       selectedPokemon = pRenderSettings.meshToRender();
@@ -660,7 +681,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
           pokemans.add(new Pokemon(pokemonMesh, pokemonShader, selectedPokemon, newPokemonAnchor));
           // For devices that support the Depth API, shows a dialog to suggest enabling
           // depth-based occlusion. This dialog needs to be spawned on the UI thread.
-          this.runOnUiThread(this::showOcclusionDialogIfNeeded);
+          //this.runOnUiThread(this::showOcclusionDialogIfNeeded);
 
           // Hits are sorted by depth. Consider only closest hit on a plane, Oriented Point, or
           // Instant Placement Point.
@@ -669,6 +690,36 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       }
     }
   }
+
+  /** Clears the board and sets up the fight */
+  private void launchPokemonSingleDeviceFight(){
+    // Clear the board to start
+    for(Pokemon pokemon : pokemans){
+      pokemon.getAnchor().detach();
+    }
+    pokemans.clear();
+
+    // Select Pokemon1
+
+    PopupMenu popupMenu = new PopupMenu(HelloArActivity.this, fightButton);
+    int size = 0;
+    for(String pokemon: availablePokemonModels) {
+      popupMenu.getMenu().add(size, Menu.FIRST + size, 0, pokemon);
+      size++;
+    }
+    popupMenu.setOnMenuItemClickListener(HelloArActivity.this::settingsMenuClick);
+    popupMenu.show();
+    // Select Pokemon2
+
+    // new fight?
+    // fight.start(poke1,poke2)
+    // result = fight.update(action1, action2)
+    // remove loser
+
+    
+  }
+
+   
 
   /**
    * Shows a pop-up dialog on the first call, determining whether the user wants to enable
@@ -697,11 +748,13 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         .show();
   }
 
+  // TODO: REDO WITH DYNAMIC ARRAYLIST NOT PREMADE ARRAY
   private void launchPokemonSettingsMenuDialog(){
     resetSettingsMenuDialogCheckboxes();
     Resources resources = getResources();
     new AlertDialog.Builder(this)
             .setTitle("Choose your Pokemon! *(only select one)*")
+            // BAD
             .setMultiChoiceItems(
                     resources.getStringArray(R.array.pokemon_options_array),
                     pokemansSettingsMenuDialogCheckboxes,
